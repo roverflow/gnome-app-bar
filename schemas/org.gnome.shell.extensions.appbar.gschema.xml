@@ -1,0 +1,121 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<schemalist gettext-domain="gnome-app-bar">
+  <enum id="org.gnome.shell.extensions.appbar.IndicatorStyle">
+    <value nick="bar" value="0"/>
+    <value nick="dot" value="1"/>
+    <value nick="none" value="2"/>
+  </enum>
+
+  <enum id="org.gnome.shell.extensions.appbar.GroupingMode">
+    <value nick="grouped" value="0"/>
+    <value nick="ungrouped" value="1"/>
+  </enum>
+
+  <enum id="org.gnome.shell.extensions.appbar.PanelPosition">
+    <value nick="far-left" value="0"/>
+    <value nick="left" value="1"/>
+    <value nick="center" value="2"/>
+    <value nick="right" value="3"/>
+  </enum>
+
+  <schema id="org.gnome.shell.extensions.appbar"
+          path="/org/gnome/shell/extensions/appbar/">
+
+    <key name="icon-size" type="i">
+      <default>20</default>
+      <range min="12" max="32"/>
+      <summary>Icon size</summary>
+      <description>Height of an app icon in pixels.</description>
+    </key>
+
+    <key name="icon-spacing" type="i">
+      <default>8</default>
+      <range min="0" max="24"/>
+      <summary>Space between icons</summary>
+      <description>Space between neighbouring icons in pixels.</description>
+    </key>
+
+    <key name="vertical-offset" type="i">
+      <default>0</default>
+      <range min="-10" max="10"/>
+      <summary>Vertical nudge</summary>
+      <description>Moves icons up (negative) or down (positive) from the centre of the panel, without moving the indicator.</description>
+    </key>
+
+    <key name="indicator-style" enum="org.gnome.shell.extensions.appbar.IndicatorStyle">
+      <default>'bar'</default>
+      <summary>Indicator style</summary>
+      <description>Shape of the running indicator drawn beneath an icon.</description>
+    </key>
+
+    <key name="indicator-thickness" type="i">
+      <default>3</default>
+      <range min="1" max="6"/>
+      <summary>Indicator thickness</summary>
+      <description>Height of the indicator bar, or radius of the dot, in pixels.</description>
+    </key>
+
+    <key name="indicator-bottom-margin" type="i">
+      <default>3</default>
+      <range min="0" max="12"/>
+      <summary>Indicator distance from the bottom</summary>
+      <description>Gap between the indicator and the bottom edge of the panel, in pixels.</description>
+    </key>
+
+    <key name="show-window-count" type="b">
+      <default>false</default>
+      <summary>Window count badge</summary>
+      <description>Show the number of open windows in a badge on top of an icon that has more than one.</description>
+    </key>
+
+    <key name="group-windows" enum="org.gnome.shell.extensions.appbar.GroupingMode">
+      <default>'grouped'</default>
+      <summary>Window grouping</summary>
+      <description>Whether an app gets one icon for all its windows, or one icon per window.</description>
+    </key>
+
+    <key name="panel-position" enum="org.gnome.shell.extensions.appbar.PanelPosition">
+      <default>'left'</default>
+      <summary>Position in the panel</summary>
+      <description>Where the taskbar sits: far left of the panel, left after the workspace pill, center, or right before the status area.</description>
+    </key>
+
+    <key name="show-previews" type="b">
+      <default>true</default>
+      <summary>Window previews on hover</summary>
+      <description>Show live window thumbnails when hovering an icon with open windows, instead of the text tooltip.</description>
+    </key>
+
+    <key name="preview-size" type="i">
+      <default>180</default>
+      <range min="120" max="320"/>
+      <summary>Preview width</summary>
+      <description>Maximum width of one window thumbnail in pixels. Thumbnails shrink when too many to fit.</description>
+    </key>
+
+    <key name="show-favorites" type="b">
+      <default>true</default>
+      <summary>Show pinned favourites</summary>
+      <description>Show pinned apps even when they are not running.</description>
+    </key>
+
+    <key name="isolate-workspaces" type="b">
+      <default>true</default>
+      <summary>Current workspace only</summary>
+      <description>Only show apps with a window on the active workspace.</description>
+    </key>
+
+    <key name="hidden-apps" type="as">
+      <default>[]</default>
+      <summary>Hidden apps</summary>
+      <description>Desktop file ids of apps the panel never shows, running or not.</description>
+    </key>
+
+    <key name="hotkeys" type="b">
+      <default>false</default>
+      <summary>Super+number activates icons</summary>
+      <description>Super+1 to Super+9 activate the icon in that position, instead of the Nth favorite in the dash.</description>
+    </key>
+
+  </schema>
+</schemalist>

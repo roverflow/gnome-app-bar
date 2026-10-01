@@ -1,0 +1,39 @@
+/* SPDX-License-Identifier: GPL-3.0-or-later */
+
+@import url("stylesheet-dark.css");
+
+.appbar-app-button:focus {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.12);
+}
+
+.appbar-indicator.running {
+  background-color: rgba(34, 34, 38, 0.5);
+}
+
+.appbar-indicator.running.attention {
+  background-color: #e5a50a;
+}
+
+.appbar-tooltip {
+  background-color: #fafafb;
+  color: #222226;
+  border: 1px solid rgba(34, 34, 38, 0.15);
+}
+
+.appbar-preview {
+  background-color: #fafafb;
+  border: 1px solid rgba(34, 34, 38, 0.15);
+}
+
+.appbar-preview-item:hover,
+.appbar-preview-item:focus {
+  background-color: rgba(34, 34, 38, 0.1);
+}
+
+.appbar-preview-title {
+  color: #222226;
+}
+
+.appbar-drag-placeholder {
+  background-color: rgba(34, 34, 38, 0.25);
+}
