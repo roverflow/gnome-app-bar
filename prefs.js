@@ -8,8 +8,13 @@ import {BehaviorPage} from './preferences/behaviorPage.js';
 export default class AppBarPreferences extends ExtensionPreferences {
     fillPreferencesWindow(window) {
         const settings = this.getSettings();
+        const pages = [new AppearancePage(settings), new BehaviorPage(settings)];
+        pages.forEach(page => window.add(page));
 
-        window.add(new AppearancePage(settings));
-        window.add(new BehaviorPage(settings));
+        // Settings handlers keep the pages alive; drop them with the window.
+        window.connect('close-request', () => {
+            pages.forEach(page => page.disconnectSettings());
+            return false;
+        });
     }
 }

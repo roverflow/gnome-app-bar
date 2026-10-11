@@ -29,6 +29,7 @@ export const Appearance = GObject.registerClass({
         super._init();
 
         this._settings = settings;
+        this._version = 0;
         this._reload();
 
         for (const key of WATCHED_KEYS) {
@@ -42,6 +43,7 @@ export const Appearance = GObject.registerClass({
     // styleFor() runs for every button on every focus change, so it reads
     // these cached fields instead of GSettings.
     _reload() {
+        this._version++;
         this._iconSize = this._settings.get_int('icon-size');
         this._iconOffset = this._settings.get_int('vertical-offset');
         this._indicatorName = this._settings.get_string('indicator-style');
@@ -56,6 +58,11 @@ export const Appearance = GObject.registerClass({
 
         this._indicatorSingle = this._indicatorStyle(thickness, bottom, false);
         this._indicatorMultiple = this._indicatorStyle(thickness, bottom, true);
+    }
+
+    // Changes whenever a setting does, so buttons can tell their style is stale.
+    get version() {
+        return this._version;
     }
 
     // iconPulseOpacity is the peak of the launch pulse, or null for none.

@@ -185,17 +185,26 @@ class AppBarPreviewPopup extends St.BoxLayout {
 
     _buildClone(item, actor, width) {
         const maxHeight = Math.round(width * MAX_HEIGHT_FRACTION);
-        const scale = Math.min(
-            width / actor.width, maxHeight / actor.height, 1);
+        const clone = new Clutter.Clone({source: actor});
+        const fit = () => {
+            const scale = Math.min(
+                width / actor.width, maxHeight / actor.height, 1);
+            clone.set_size(
+                Math.round(actor.width * scale),
+                Math.round(actor.height * scale));
+        };
+        fit();
 
-        const clone = new Clutter.Clone({
-            source: actor,
-            width: Math.round(actor.width * scale),
-            height: Math.round(actor.height * scale),
-        });
-
-        // Painting a clone of a destroyed actor would crash.
-        actor.connectObject('destroy', () => clone.set_source(null), item);
+        actor.connectObject(
+            // A clone stretches to its own size, so refit on resize.
+            'notify::size', () => {
+                fit();
+                if (this._source)
+                    positionBelow(this, this._source);
+            },
+            // Painting a clone of a destroyed actor would crash.
+            'destroy', () => clone.set_source(null),
+            item);
 
         return clone;
     }

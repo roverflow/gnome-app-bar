@@ -24,12 +24,6 @@ export function taskbarWindows(app) {
     return app.get_windows().filter(w => !w.is_skip_taskbar());
 }
 
-// `windows` is the app's taskbarWindows(). Splash screens are skip-taskbar,
-// so an app showing only a splash still counts as launching.
-export function isLaunching(app, windows) {
-    return windows.length === 0 && app.state === Shell.AppState.STARTING;
-}
-
 export const AppButton = GObject.registerClass(
 class AppBarAppButton extends St.Button {
     _init(entry, appBar, appearance) {
@@ -57,6 +51,7 @@ class AppBarAppButton extends St.Button {
         this._launching = false;
         this._attention = false;
         this._pulsing = false;
+        this._styleKey = null;
 
         // Stacked, so the indicator and badge never push the icon off centre.
         const overlay = new St.Widget({
@@ -119,6 +114,10 @@ class AppBarAppButton extends St.Button {
         this.sync();
     }
 
+    setWindowSequence(sequence) {
+        this._windowSequence = sequence;
+    }
+
     // The app's visible windows in grouped mode, or the one window this
     // button is for in ungrouped mode.
     getWindows() {
@@ -144,7 +143,7 @@ class AppBarAppButton extends St.Button {
 
         this._running = windows.length > 0;
         this._focused = this._isFocused(windows);
-        this._launching = isLaunching(this.app, all);
+        this._launching = this._appBar.isLaunching(this.app, all);
 
         this._attention = !this._focused &&
             windows.some(w => w.demands_attention || w.urgent);
@@ -160,6 +159,15 @@ class AppBarAppButton extends St.Button {
     }
 
     _applyAppearance(windowCount) {
+        // Every rebuild and focus change restyles all buttons; most of them
+        // have not changed.
+        const key = [this._running, this._focused, this._launching,
+            this._attention, this.hover, windowCount, this._icon.mapped,
+            this._appearance.version].join();
+        if (key === this._styleKey)
+            return;
+        this._styleKey = key;
+
         const style = this._appearance.styleFor({
             running: this._running,
             focused: this._focused,

@@ -19,6 +19,7 @@ class AppBarAppearancePage extends Adw.PreferencesPage {
         });
 
         this._settings = settings;
+        this._settingsIds = [];
 
         const layout = new Adw.PreferencesGroup({
             title: _('Layout'),
@@ -86,6 +87,16 @@ class AppBarAppearancePage extends Adw.PreferencesPage {
         reset.add(this._resetRow());
     }
 
+    _onSettingChanged(key, callback) {
+        this._settingsIds.push(
+            this._settings.connect(`changed::${key}`, callback));
+    }
+
+    disconnectSettings() {
+        this._settingsIds.forEach(id => this._settings.disconnect(id));
+        this._settingsIds = [];
+    }
+
     _spinRow(key, {title, subtitle, lower, upper}) {
         const row = new Adw.SpinRow({
             title,
@@ -115,7 +126,7 @@ class AppBarAppearancePage extends Adw.PreferencesPage {
             this._settings.set_string('indicator-style',
                 INDICATOR_STYLES[row.get_selected()]));
 
-        this._settings.connect('changed::indicator-style', () => {
+        this._onSettingChanged('indicator-style', () => {
             const index = INDICATOR_STYLES.indexOf(
                 this._settings.get_string('indicator-style'));
             if (index >= 0 && index !== row.get_selected())

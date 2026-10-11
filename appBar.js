@@ -15,7 +15,7 @@ import * as PanelMenu from 'resource:///org/gnome/shell/ui/panelMenu.js';
 import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js';
 
 import {Appearance} from './appearance.js';
-import {AppButton, isLaunching, taskbarWindows} from './appButton.js';
+import {AppButton, taskbarWindows} from './appButton.js';
 import * as HiddenApps from './hiddenApps.js';
 import {PreviewPopup, positionBelow} from './previews.js';
 
@@ -35,6 +35,7 @@ class AppBarPanelButton extends PanelMenu.Button {
 
         this._settings = settings;
         this._appearance = new Appearance(settings);
+        this._loadSettings();
 
         this.remove_style_class_name('panel-button');
         this.add_style_class_name('appbar-panel-button');
@@ -56,8 +57,9 @@ class AppBarPanelButton extends PanelMenu.Button {
         this._buttons = new Map();
         this._trackedWindows = new Set();
 
-        // get_running() leaves out apps in the STARTING state.
-        this._startingApps = new Set();
+        // get_running() leaves out apps in the STARTING state. Maps each one
+        // to whether it has shown a window since its launch began.
+        this._startingApps = new Map();
 
         // Signal bursts collapse into one pass before the next frame.
         this._laters = global.compositor.get_laters();
@@ -93,11 +95,15 @@ class AppBarPanelButton extends PanelMenu.Button {
         this._appearance.connectObject(
             'changed', () => this._queueRestyle(), this);
 
+        const reload = () => {
+            this._loadSettings();
+            this.queueSync();
+        };
         this._settings.connectObject(
-            'changed::show-favorites', () => this.queueSync(),
-            'changed::isolate-workspaces', () => this.queueSync(),
-            'changed::group-windows', () => this.queueSync(),
-            `changed::${HiddenApps.KEY}`, () => this.queueSync(),
+            'changed::show-favorites', reload,
+            'changed::isolate-workspaces', reload,
+            'changed::group-windows', reload,
+            `changed::${HiddenApps.KEY}`, reload,
             'changed::show-previews', () => this._onPreviewsToggled(),
             this);
 
@@ -129,19 +135,29 @@ class AppBarPanelButton extends PanelMenu.Button {
         this._sync();
     }
 
+    // Rebuilds run often and read these for every app, so they are cached.
+    _loadSettings() {
+        this._grouped =
+            this._settings.get_string('group-windows') !== 'ungrouped';
+        this._showFavorites = this._settings.get_boolean('show-favorites');
+        this._isolateWorkspaces =
+            this._settings.get_boolean('isolate-workspaces');
+        this._showPreviews = this._settings.get_boolean('show-previews');
+        this._hidden = HiddenApps.get(this._settings);
+    }
+
     get isolateWorkspaces() {
-        return this._settings.get_boolean('isolate-workspaces');
+        return this._isolateWorkspaces;
     }
 
     // Favorites first, then running apps in order of their oldest window.
     // Hidden apps are left out, even when pinned.
     _desiredEntries() {
-        const grouped =
-            this._settings.get_string('group-windows') !== 'ungrouped';
-        const showFavorites = this._settings.get_boolean('show-favorites');
-        const favorites = showFavorites ? this._appFavorites.getFavorites() : [];
+        const grouped = this._grouped;
+        const favorites = this._showFavorites
+            ? this._appFavorites.getFavorites() : [];
         const favoriteIds = new Set(favorites.map(app => app.get_id()));
-        const hidden = HiddenApps.get(this._settings);
+        const hidden = this._hidden;
         const workspace = global.workspace_manager.get_active_workspace();
 
         const entries = [];
@@ -158,11 +174,11 @@ class AppBarPanelButton extends PanelMenu.Button {
                 continue;
 
             const windows = taskbarWindows(app);
-            const visible = this.isolateWorkspaces
+            const visible = this._isolateWorkspaces
                 ? windows.filter(w => w.located_on_workspace(workspace))
                 : windows;
 
-            if (visible.length > 0 || isLaunching(app, windows))
+            if (visible.length > 0 || this.isLaunching(app, windows))
                 running.push({app, visible, sequence: lowestSequence(windows)});
         }
 
@@ -178,7 +194,14 @@ class AppBarPanelButton extends PanelMenu.Button {
     // launch completes. Firefox can sit there for seconds with its window
     // already on screen, so STARTING apps are added here.
     _runningApps() {
-        return [...this._appSystem.get_running(), ...this._startingApps];
+        return [...this._appSystem.get_running(), ...this._startingApps.keys()];
+    }
+
+    // `windows` is the app's taskbarWindows(). An app that closes its
+    // windows before its launch completes is still STARTING, but closing.
+    // Splash screens are skip-taskbar, so they don't end a launch.
+    isLaunching(app, windows) {
+        return windows.length === 0 && this._startingApps.get(app) === false;
     }
 
     _onAppStateChanged(app) {
@@ -195,8 +218,12 @@ class AppBarPanelButton extends PanelMenu.Button {
             return;
 
         // A window arriving on a STARTING app does not change its state.
-        this._startingApps.add(app);
-        app.connectObject('windows-changed', () => this.queueSync(), this);
+        this._startingApps.set(app, taskbarWindows(app).length > 0);
+        app.connectObject('windows-changed', () => {
+            if (taskbarWindows(app).length > 0)
+                this._startingApps.set(app, true);
+            this.queueSync();
+        }, this);
     }
 
     _unwatchLaunch(app) {
@@ -228,7 +255,7 @@ class AppBarPanelButton extends PanelMenu.Button {
 
     _visibleWindows(app) {
         const windows = taskbarWindows(app);
-        if (!this.isolateWorkspaces)
+        if (!this._isolateWorkspaces)
             return windows;
 
         const workspace = global.workspace_manager.get_active_workspace();
@@ -301,12 +328,30 @@ class AppBarPanelButton extends PanelMenu.Button {
 
     _sync() {
         const desired = this._desiredEntries();
-        const kept = new Set();
+        const kept = new Set(desired.map(entry => entry.id));
+
+        // In ungrouped mode an app's entry id changes when its first window
+        // opens or its last one closes. Reusing the outgoing button for the
+        // same app avoids a second fade-in.
+        const spare = new Map();
+        for (const [id, button] of this._buttons) {
+            if (kept.has(id))
+                continue;
+            const list = spare.get(button.app) ?? [];
+            list.push(id);
+            spare.set(button.app, list);
+        }
 
         desired.forEach((entry, index) => {
-            kept.add(entry.id);
-
             let button = this._buttons.get(entry.id);
+            const spareId = button ? null : spare.get(entry.app)?.pop();
+            if (spareId) {
+                button = this._buttons.get(spareId);
+                this._buttons.delete(spareId);
+                this._buttons.set(entry.id, button);
+                button.setWindowSequence(entry.windowSequence);
+            }
+
             if (button) {
                 if (this._box.get_child_at_index(index) !== button)
                     this._box.set_child_at_index(button, index);
@@ -444,7 +489,7 @@ class AppBarPanelButton extends PanelMenu.Button {
             return;
 
         const windows = button.getWindows();
-        if (windows.length > 0 && this._settings.get_boolean('show-previews')) {
+        if (windows.length > 0 && this._showPreviews) {
             this._tooltip?.hide();
             this._ensurePreview().present(button, windows);
         } else {
@@ -537,7 +582,8 @@ class AppBarPanelButton extends PanelMenu.Button {
     }
 
     _onPreviewsToggled() {
-        if (!this._settings.get_boolean('show-previews'))
+        this._showPreviews = this._settings.get_boolean('show-previews');
+        if (!this._showPreviews)
             this._preview?.dismiss();
     }
 
@@ -721,7 +767,8 @@ class AppBarPanelButton extends PanelMenu.Button {
 
         this._trackedWindows.forEach(w => w.disconnectObject(this));
         this._trackedWindows.clear();
-        this._startingApps.forEach(app => app.disconnectObject(this));
+        for (const app of this._startingApps.keys())
+            app.disconnectObject(this);
         this._startingApps.clear();
 
         this._appSystem.disconnectObject(this);

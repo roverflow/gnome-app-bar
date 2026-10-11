@@ -22,6 +22,7 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         });
 
         this._settings = settings;
+        this._settingsIds = [];
 
         const apps = new Adw.PreferencesGroup({
             title: _('Which apps to show'),
@@ -51,8 +52,7 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         this.add(this._hiddenGroup);
         this._hiddenRows = [];
         this._fillHiddenApps();
-        this._settings.connect(`changed::${HiddenApps.KEY}`,
-            () => this._fillHiddenApps());
+        this._onSettingChanged(HiddenApps.KEY, () => this._fillHiddenApps());
 
         const position = new Adw.PreferencesGroup({
             title: _('Position'),
@@ -101,6 +101,16 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         this._settings.bind('show-previews', size, 'sensitive',
             Gio.SettingsBindFlags.GET);
         previews.add(size);
+    }
+
+    _onSettingChanged(key, callback) {
+        this._settingsIds.push(
+            this._settings.connect(`changed::${key}`, callback));
+    }
+
+    disconnectSettings() {
+        this._settingsIds.forEach(id => this._settings.disconnect(id));
+        this._settingsIds = [];
     }
 
     _fillHiddenApps() {
@@ -176,7 +186,7 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         row.connect('notify::selected', () =>
             this._settings.set_string(key, nicks[row.get_selected()]));
 
-        this._settings.connect(`changed::${key}`, () => {
+        this._onSettingChanged(key, () => {
             const index = nicks.indexOf(this._settings.get_string(key));
             if (index >= 0 && index !== row.get_selected())
                 row.set_selected(index);
