@@ -1,7 +1,5 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
-import St from 'gi://St';
-
 import * as AppFavorites from 'resource:///org/gnome/shell/ui/appFavorites.js';
 import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 import * as PopupMenu from 'resource:///org/gnome/shell/ui/popupMenu.js';
@@ -10,11 +8,13 @@ import {gettext as _} from 'resource:///org/gnome/shell/extensions/extension.js'
 const MAX_TITLE_LENGTH = 44;
 
 export class AppContextMenu extends PopupMenu.PopupMenu {
-    constructor(appButton, appBar) {
-        super(appButton, 0.5, St.Side.TOP);
+    // `side` is the screen edge the bar sits on; the menu opens away from
+    // it. onHide(app) runs for Hide from App Bar.
+    constructor(appButton, side, onHide) {
+        super(appButton, 0.5, side);
 
         this._appButton = appButton;
-        this._appBar = appBar;
+        this._onHide = onHide;
     }
 
     rebuild() {
@@ -59,6 +59,7 @@ export class AppContextMenu extends PopupMenu.PopupMenu {
             const item = new PopupMenu.PopupMenuItem(_('New Window'));
             item.connect('activate', () => {
                 Main.overview.hide();
+                this._appButton.animateLaunch();
                 app.open_new_window(-1);
             });
             items.push(item);
@@ -99,7 +100,7 @@ export class AppContextMenu extends PopupMenu.PopupMenu {
         // A window-backed app's id changes every launch, so it can't be hidden.
         if (app.get_app_info()) {
             const hide = new PopupMenu.PopupMenuItem(_('Hide from App Bar'));
-            hide.connect('activate', () => this._appBar.hideApp(app));
+            hide.connect('activate', () => this._onHide(app));
             this.addMenuItem(hide);
         }
     }

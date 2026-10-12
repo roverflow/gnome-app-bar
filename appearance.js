@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import GObject from 'gi://GObject';
+import St from 'gi://St';
 
 const WATCHED_KEYS = [
     'icon-size',
@@ -17,10 +18,17 @@ const OPACITY_ACTIVE = 255;
 const OPACITY_RUNNING = 215;
 const OPACITY_IDLE = 110;
 
-// Indicator length as a fraction of icon size.
-const BAR_FRACTION_SINGLE = 0.7;
-const BAR_FRACTION_MULTIPLE = 1.1;
-const DOT_FRACTION_MULTIPLE = 2.2;
+// A launching icon pulses between this and OPACITY_ACTIVE.
+const OPACITY_LAUNCHING = 150;
+
+// An unfocused single-window indicator, as a fraction of icon size. The
+// dot is round instead.
+const BAR_FRACTION = 0.3;
+
+// How much longer the indicator grows for the focused app, and for an app
+// with more than one window.
+const FOCUSED_STRETCH = 2.4;
+const MULTIPLE_STRETCH = 1.6;
 
 export const Appearance = GObject.registerClass({
     Signals: {'changed': {}},
@@ -29,15 +37,19 @@ export const Appearance = GObject.registerClass({
         super._init();
 
         this._settings = settings;
+        this._themeContext = St.ThemeContext.get_for_stage(global.stage);
         this._version = 0;
         this._reload();
 
-        for (const key of WATCHED_KEYS) {
-            this._settings.connectObject(`changed::${key}`, () => {
-                this._reload();
-                this.emit('changed');
-            }, this);
-        }
+        const reload = () => {
+            this._reload();
+            this.emit('changed');
+        };
+        for (const key of WATCHED_KEYS)
+            this._settings.connectObject(`changed::${key}`, reload, this);
+
+        // Indicator widths are in actor pixels, which the scale multiplies.
+        this._themeContext.connectObject('notify::scale-factor', reload, this);
     }
 
     // styleFor() runs for every button on every focus change, so it reads
@@ -56,8 +68,18 @@ export const Appearance = GObject.registerClass({
         const thickness = this._settings.get_int('indicator-thickness');
         const bottom = this._settings.get_int('indicator-bottom-margin');
 
-        this._indicatorSingle = this._indicatorStyle(thickness, bottom, false);
-        this._indicatorMultiple = this._indicatorStyle(thickness, bottom, true);
+        // The CSS sizes the stylesheet scales; widths are set from code and
+        // eased, so they are scaled here.
+        const height = this._indicatorName === 'dot' ? thickness * 2 : thickness;
+        this._indicatorStyle =
+            `min-height: ${height}px;` +
+            `border-radius: ${Math.ceil(height / 2)}px;` +
+            `margin-bottom: ${bottom}px;`;
+
+        const scale = this._themeContext.scale_factor;
+        this._indicatorBaseWidth = scale * (this._indicatorName === 'dot'
+            ? height
+            : Math.max(height, this._iconSize * BAR_FRACTION));
     }
 
     // Changes whenever a setting does, so buttons can tell their style is stale.
@@ -65,7 +87,8 @@ export const Appearance = GObject.registerClass({
         return this._version;
     }
 
-    // iconPulseOpacity is the peak of the launch pulse, or null for none.
+    // iconPulseOpacity is the far end of the launch pulse, or null for none.
+    // indicatorWidth is in actor pixels.
     styleFor(state) {
         return {
             iconSize: this._iconSize,
@@ -74,40 +97,33 @@ export const Appearance = GObject.registerClass({
             iconOffset: this._iconOffset,
             buttonStyle: this._buttonStyle,
             indicatorVisible: state.running && this._indicatorName !== 'none',
-            indicatorStyle: state.windowCount > 1
-                ? this._indicatorMultiple
-                : this._indicatorSingle,
+            indicatorStyle: this._indicatorStyle,
+            indicatorWidth: this._indicatorWidthFor(state),
             badgeVisible: this._showWindowCount && state.windowCount > 1,
         };
     }
 
     _opacityFor({running, focused, launching, attention, hovered}) {
         if (launching)
-            return OPACITY_IDLE;
+            return OPACITY_LAUNCHING;
         if (hovered || focused || attention)
             return OPACITY_ACTIVE;
         return running ? OPACITY_RUNNING : OPACITY_IDLE;
     }
 
-    _indicatorStyle(thickness, bottom, multiple) {
-        let width, height;
-        if (this._indicatorName === 'dot') {
-            height = thickness * 2;
-            width = multiple ? Math.round(thickness * DOT_FRACTION_MULTIPLE * 2) : height;
-        } else {
-            height = thickness;
-            width = Math.round(this._iconSize *
-                (multiple ? BAR_FRACTION_MULTIPLE : BAR_FRACTION_SINGLE));
-        }
-
-        return `min-width: ${width}px;` +
-               `min-height: ${height}px;` +
-               `border-radius: ${Math.ceil(height / 2)}px;` +
-               `margin-bottom: ${bottom}px;`;
+    _indicatorWidthFor({focused, windowCount}) {
+        let width = this._indicatorBaseWidth;
+        if (focused)
+            width *= FOCUSED_STRETCH;
+        if (windowCount > 1)
+            width *= MULTIPLE_STRETCH;
+        return Math.round(width);
     }
 
     destroy() {
         this._settings.disconnectObject(this);
         this._settings = null;
+        this._themeContext.disconnectObject(this);
+        this._themeContext = null;
     }
 });

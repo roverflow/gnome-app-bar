@@ -2,8 +2,19 @@
 
 @import url("stylesheet-dark.css");
 
+/* The tooltip keeps the dark style, as the shell's dash label does. */
+
+.appbar-app-button:hover {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.17);
+}
+
+.appbar-app-button:active,
+.appbar-app-button.menu-open {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.28);
+}
+
 .appbar-app-button:focus {
-  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.12);
+  box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.2);
 }
 
 .appbar-indicator.running {
@@ -14,15 +25,13 @@
   background-color: #e5a50a;
 }
 
-.appbar-tooltip {
-  background-color: #fafafb;
-  color: #222226;
-  border: 1px solid rgba(34, 34, 38, 0.15);
-}
-
 .appbar-preview {
   background-color: #fafafb;
   border: 1px solid rgba(34, 34, 38, 0.15);
+}
+
+.appbar-preview-item.focused {
+  background-color: rgba(34, 34, 38, 0.06);
 }
 
 .appbar-preview-item:hover,
@@ -30,10 +39,42 @@
   background-color: rgba(34, 34, 38, 0.1);
 }
 
-.appbar-preview-title {
+.appbar-preview-title,
+.appbar-preview-close {
   color: #222226;
+}
+
+.appbar-preview-close:hover,
+.appbar-preview-close:focus {
+  background-color: rgba(34, 34, 38, 0.12);
+}
+
+.appbar-preview-close:active {
+  background-color: rgba(34, 34, 38, 0.2);
 }
 
 .appbar-drag-placeholder {
   background-color: rgba(34, 34, 38, 0.25);
+}
+
+.appbar-bottom-panel {
+  background-color: #fafafb;
+  box-shadow: inset 0 0.5px 0 0 rgba(34, 34, 38, 0.1);
+}
+
+.appbar-bottom-panel .appbar-app-button.focused {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.07);
+}
+
+.appbar-bottom-panel .appbar-app-button:hover {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.12);
+}
+
+.appbar-bottom-panel .appbar-app-button:active,
+.appbar-bottom-panel .appbar-app-button.menu-open {
+  box-shadow: inset 0 0 0 100px rgba(34, 34, 38, 0.18);
+}
+
+.appbar-bottom-panel .appbar-app-button:focus {
+  box-shadow: inset 0 0 0 2px st-transparentize(-st-accent-color, 0.2);
 }

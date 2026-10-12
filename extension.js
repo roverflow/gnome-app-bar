@@ -1,38 +1,44 @@
 // SPDX-License-Identifier: GPL-3.0-or-later
 
 import {Extension} from 'resource:///org/gnome/shell/extensions/extension.js';
-import * as Main from 'resource:///org/gnome/shell/ui/main.js';
 
-import {AppBar} from './appBar.js';
 import {Hotkeys} from './hotkeys.js';
+import {BottomPanelLayout} from './layouts/bottomPanel.js';
+import {TopPanelLayout} from './layouts/topPanel.js';
+import {TaskbarModel} from './taskbarModel.js';
 
-const PANEL_ROLE = 'appbar';
-
-// panel-position to [box, index]. 'left' sits after the workspace pill,
-// 'far-left' before it.
-const POSITIONS = {
-    'far-left': ['left', 0],
-    'left': ['left', 1],
-    'center': ['center', 0],
-    'right': ['right', 0],
+// layout setting to the class that places the bar. Each takes (settings,
+// model), exposes `bar`, and has destroy().
+const LAYOUTS = {
+    'top-panel': TopPanelLayout,
+    'bottom-panel': BottomPanelLayout,
 };
 
 export default class AppBarExtension extends Extension {
     enable() {
         this._settings = this.getSettings();
 
-        // A panel role can't move between boxes, so rebuild the bar.
-        this._settings.connectObject('changed::panel-position', () => {
-            this._appBar?.destroy();
-            this._appBar = null;
-            this._addBar();
-        }, 'changed::hotkeys', () => this._syncHotkeys(), this);
+        // Kept across layout switches, so app and window tracking carries on.
+        this._model = new TaskbarModel(this._settings);
+        this._createLayout();
 
-        this._addBar();
-
-        // Reads this._appBar on each press, so it follows a rebuild.
-        this._hotkeys = new Hotkeys(slot => this._appBar?.activateNth(slot));
+        // Reads this._layout on each press, so it follows a layout switch.
+        this._hotkeys = new Hotkeys(slot => this._layout?.bar.activateNth(slot));
         this._syncHotkeys();
+
+        this._settings.connectObject(
+            'changed::layout', () => {
+                this._layout.destroy();
+                this._createLayout();
+            },
+            'changed::hotkeys', () => this._syncHotkeys(),
+            this);
+    }
+
+    _createLayout() {
+        const Layout = LAYOUTS[this._settings.get_string('layout')] ??
+            TopPanelLayout;
+        this._layout = new Layout(this._settings, this._model);
     }
 
     _syncHotkeys() {
@@ -42,23 +48,18 @@ export default class AppBarExtension extends Extension {
             this._hotkeys.disable();
     }
 
-    _addBar() {
-        const nick = this._settings.get_string('panel-position');
-        const [box, index] = POSITIONS[nick] ?? POSITIONS['left'];
-
-        this._appBar = new AppBar(this._settings);
-        Main.panel.addToStatusArea(PANEL_ROLE, this._appBar, index, box);
-    }
-
     disable() {
-        this._settings?.disconnectObject(this);
-        this._settings = null;
+        this._settings.disconnectObject(this);
 
-        this._hotkeys?.disable();
+        this._hotkeys.disable();
         this._hotkeys = null;
 
-        // The panel drops the status area role on destroy.
-        this._appBar?.destroy();
-        this._appBar = null;
+        this._layout.destroy();
+        this._layout = null;
+
+        this._model.destroy();
+        this._model = null;
+
+        this._settings = null;
     }
 }

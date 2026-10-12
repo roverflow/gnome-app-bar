@@ -11,6 +11,11 @@
     <value nick="ungrouped" value="1"/>
   </enum>
 
+  <enum id="org.gnome.shell.extensions.appbar.Layout">
+    <value nick="top-panel" value="0"/>
+    <value nick="bottom-panel" value="1"/>
+  </enum>
+
   <enum id="org.gnome.shell.extensions.appbar.PanelPosition">
     <value nick="far-left" value="0"/>
     <value nick="left" value="1"/>
@@ -23,7 +28,7 @@
 
     <key name="icon-size" type="i">
       <default>20</default>
-      <range min="12" max="32"/>
+      <range min="12" max="48"/>
       <summary>Icon size</summary>
       <description>Height of an app icon in pixels.</description>
     </key>
@@ -74,10 +79,23 @@
       <description>Whether an app gets one icon for all its windows, or one icon per window.</description>
     </key>
 
+    <key name="layout" enum="org.gnome.shell.extensions.appbar.Layout">
+      <default>'top-panel'</default>
+      <summary>Layout</summary>
+      <description>Whether the icons sit in GNOME's top panel, or in a full-width panel along the bottom of the primary monitor with the icons centred.</description>
+    </key>
+
+    <key name="bottom-panel-height" type="i">
+      <default>48</default>
+      <range min="32" max="72"/>
+      <summary>Bottom panel height</summary>
+      <description>Height of the bottom panel in pixels. Only used by the bottom panel layout.</description>
+    </key>
+
     <key name="panel-position" enum="org.gnome.shell.extensions.appbar.PanelPosition">
       <default>'left'</default>
       <summary>Position in the panel</summary>
-      <description>Where the taskbar sits: far left of the panel, left after the workspace pill, center, or right before the status area.</description>
+      <description>Where the taskbar sits in the top panel: far left, left after the workspace pill, center, or right before the status area. Only used by the top panel layout.</description>
     </key>
 
     <key name="show-previews" type="b">

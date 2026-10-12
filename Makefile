@@ -1,8 +1,11 @@
 UUID = gnome-app-bar@roverflow
 EXTDIR = $(HOME)/.local/share/gnome-shell/extensions/$(UUID)
-SOURCES = extension.js appBar.js appButton.js appMenu.js appearance.js hotkeys.js \
-          hiddenApps.js previews.js prefs.js preferences schemas \
-          metadata.json stylesheet-dark.css stylesheet-light.css
+# `gnome-extensions pack` adds extension.js, prefs.js and metadata.json
+# itself; everything else is listed here.
+EXTRA = appBar.js appButton.js appMenu.js appearance.js dragReorder.js \
+        hiddenApps.js hotkeys.js hoverPopups.js motion.js previews.js taskbarModel.js \
+        layouts preferences stylesheet-dark.css stylesheet-light.css
+SOURCES = extension.js prefs.js metadata.json schemas $(EXTRA)
 
 .PHONY: install link uninstall enable disable pack logs test-shell
 
@@ -37,17 +40,8 @@ disable:
 ## Build the zip for extensions.gnome.org.
 pack: schemas/gschemas.compiled
 	gnome-extensions pack --force \
-	  --extra-source=appBar.js \
-	  --extra-source=appButton.js \
-	  --extra-source=appMenu.js \
-	  --extra-source=appearance.js \
-	  --extra-source=hiddenApps.js \
-	  --extra-source=hotkeys.js \
-	  --extra-source=previews.js \
-	  --extra-source=preferences \
+	  $(foreach f,$(EXTRA),--extra-source=$(f)) \
 	  --schema=schemas/org.gnome.shell.extensions.appbar.gschema.xml \
-	  --extra-source=stylesheet-dark.css \
-	  --extra-source=stylesheet-light.css \
 	  .
 
 ## Headless shell with only this extension, using separate settings.

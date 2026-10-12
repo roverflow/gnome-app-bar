@@ -1,13 +1,13 @@
 {
     "uuid": "gnome-app-bar@roverflow",
     "name": "App Bar",
-    "description": "Running apps and pinned favourites as icons in the top panel. Click to switch, click again to cycle windows, scroll to step through them.",
+    "description": "Running apps and pinned favourites as icons, in the top panel or in a centred bottom panel. Click to switch, click again to cycle windows, scroll to step through them.",
     "shell-version": [
         "48",
         "49",
         "50"
     ],
-    "version-name": "1.4.0",
+    "version-name": "1.5.0",
     "settings-schema": "org.gnome.shell.extensions.appbar",
     "gettext-domain": "gnome-app-bar",
     "url": "https://github.com/roverflow/gnome-app-bar"

@@ -1,6 +1,9 @@
 /* SPDX-License-Identifier: GPL-3.0-or-later */
 
-/* Colours only. Sizes are set from appearance.js. */
+/* Colours and shapes. Sizes that follow the settings are set from
+   appearance.js. Tints use an inset box-shadow inside a transparent border,
+   as the shell's panel buttons do, so the click area reaches the screen
+   edge while the tint stays clear of it. */
 
 #panel .appbar-panel-button {
   border: 0;
@@ -17,20 +20,36 @@
 }
 
 .appbar-app-button {
-  border: 0;
+  border: 3px solid transparent;
+  border-left-width: 0;
+  border-right-width: 0;
+  border-radius: 999px;
   background-color: transparent;
-  box-shadow: none;
-  transition-duration: 100ms;
+  box-shadow: inset 0 0 0 100px transparent;
+  transition-duration: 150ms;
+  /* Moves the running indicator down into the bottom border, where it
+     sat before the border. Read by appButton.js. */
+  -appbar-indicator-offset: 3px;
 }
 
+/* The same tints as the shell's own panel buttons. */
+.appbar-app-button:hover {
+  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.17);
+}
+
+.appbar-app-button:active,
+.appbar-app-button.menu-open {
+  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.28);
+}
+
+/* The focus ring of the shell's overview tiles. */
 .appbar-app-button:focus {
-  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.13);
-  border-radius: 6px;
+  box-shadow: inset 0 0 0 2px st-transparentize(st-mix(-st-accent-color, #ffffff, 60%), 0.2);
 }
 
 .appbar-indicator {
   background-color: transparent;
-  transition-duration: 150ms;
+  transition-duration: 200ms;
 }
 
 .appbar-indicator.running {
@@ -45,14 +64,13 @@
   background-color: #f6d32d;
 }
 
+/* The shell's own dash label, in both colour schemes. */
 .appbar-tooltip {
-  background-color: rgba(0, 0, 0, 0.85);
+  background-color: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   color: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 9.5pt;
-  font-weight: normal;
+  border-radius: 999px;
+  padding: 6px 12px;
   text-align: center;
 }
 
@@ -79,7 +97,11 @@
   border-radius: 8px;
   padding: 6px;
   background-color: transparent;
-  transition-duration: 100ms;
+  transition-duration: 150ms;
+}
+
+.appbar-preview-item.focused {
+  background-color: rgba(255, 255, 255, 0.07);
 }
 
 .appbar-preview-item:hover,
@@ -91,14 +113,70 @@
   spacing: 6px;
 }
 
+.appbar-preview-header {
+  spacing: 4px;
+}
+
 .appbar-preview-title {
   color: #ffffff;
   font-size: 8.5pt;
-  text-align: center;
+}
+
+.appbar-preview-close {
+  color: #ffffff;
+  border-radius: 999px;
+  padding: 3px;
+  background-color: transparent;
+  transition-duration: 150ms;
+}
+
+.appbar-preview-close:hover,
+.appbar-preview-close:focus {
+  background-color: rgba(255, 255, 255, 0.17);
+}
+
+.appbar-preview-close:active {
+  background-color: rgba(255, 255, 255, 0.28);
+}
+
+.appbar-preview-close-icon {
+  icon-size: 12px;
 }
 
 .appbar-drag-placeholder {
   background-color: rgba(255, 255, 255, 0.2);
   border-radius: 6px;
   margin: 4px 0;
+}
+
+/* Bottom panel layout. Same colour as the top panel. */
+
+.appbar-bottom-panel {
+  background-color: #000000;
+}
+
+/* Rounded tiles. The border keeps them off the panel edges and apart from
+   each other, and still takes clicks. */
+/* The indicator stays inside the tile. */
+.appbar-bottom-panel .appbar-app-button {
+  border-width: 4px 2px;
+  border-radius: 12px;
+  -appbar-indicator-offset: 0;
+}
+
+.appbar-bottom-panel .appbar-app-button.focused {
+  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.08);
+}
+
+.appbar-bottom-panel .appbar-app-button:hover {
+  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.14);
+}
+
+.appbar-bottom-panel .appbar-app-button:active,
+.appbar-bottom-panel .appbar-app-button.menu-open {
+  box-shadow: inset 0 0 0 100px rgba(255, 255, 255, 0.2);
+}
+
+.appbar-bottom-panel .appbar-app-button:focus {
+  box-shadow: inset 0 0 0 2px st-transparentize(st-mix(-st-accent-color, #ffffff, 60%), 0.2);
 }

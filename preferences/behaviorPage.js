@@ -2,97 +2,81 @@
 
 import Adw from 'gi://Adw';
 import Gio from 'gi://Gio';
+import GioUnix from 'gi://GioUnix';
 import GObject from 'gi://GObject';
 import Gtk from 'gi://Gtk';
 
 import {gettext as _} from 'resource:///org/gnome/Shell/Extensions/js/extensions/prefs.js';
 
 import * as HiddenApps from '../hiddenApps.js';
+import {SettingsPage} from './settingsPage.js';
 
-// Index order must match the enum nicks in the gschema.
-const PANEL_POSITIONS = ['far-left', 'left', 'center', 'right'];
+// Nick order must match the labels passed with them.
 const GROUPING_MODES = ['grouped', 'ungrouped'];
 
 export const BehaviorPage = GObject.registerClass(
-class AppBarBehaviorPage extends Adw.PreferencesPage {
+class AppBarBehaviorPage extends SettingsPage {
     _init(settings) {
-        super._init({
+        super._init(settings, {
             title: _('Behavior'),
             icon_name: 'preferences-system-symbolic',
         });
 
-        this._settings = settings;
-        this._settingsIds = [];
-
         const apps = new Adw.PreferencesGroup({
-            title: _('Which apps to show'),
+            title: _('Apps'),
+            description: _('Drag an icon on the panel to reorder pinned apps'),
         });
         this.add(apps);
 
-        apps.add(this._switchRow('show-favorites', {
-            title: _('Show pinned apps'),
+        apps.add(this.switchRow('show-favorites', {
+            title: _('Show Pinned Apps'),
             subtitle: _('Keep favourites on the panel even when they are closed'),
         }));
 
-        apps.add(this._switchRow('isolate-workspaces', {
-            title: _('Current workspace only'),
+        apps.add(this.switchRow('isolate-workspaces', {
+            title: _('Current Workspace Only'),
             subtitle: _('Hide apps whose windows are all on another workspace'),
         }));
 
-        apps.add(this._comboRow('group-windows', GROUPING_MODES, {
-            title: _('Window grouping'),
-            subtitle: _('Drag an icon to reorder pinned apps in either mode'),
-            labels: [_('One icon per app'), _('One icon per window')],
+        apps.add(this.toggleRow('group-windows', GROUPING_MODES, {
+            title: _('Icons'),
+            subtitle: _('One for each app, or one for each window'),
+            labels: [_('Per App'), _('Per Window')],
         }));
 
         this._hiddenGroup = new Adw.PreferencesGroup({
-            title: _('Hidden apps'),
-            description: _('Never shown on the panel, even while running. Right-click an icon on the panel to hide its app.'),
+            title: _('Hidden Apps'),
+            description: _('Never shown on the panel, even while running'),
         });
         this.add(this._hiddenGroup);
         this._hiddenRows = [];
         this._fillHiddenApps();
-        this._onSettingChanged(HiddenApps.KEY, () => this._fillHiddenApps());
-
-        const position = new Adw.PreferencesGroup({
-            title: _('Position'),
-        });
-        this.add(position);
-
-        position.add(this._comboRow('panel-position', PANEL_POSITIONS, {
-            title: _('Place in the panel'),
-            subtitle: _('Where the taskbar sits in the top panel'),
-            labels: [
-                _('Far left'),
-                _('Left, after the workspace pill'),
-                _('Center'),
-                _('Right, before the status area'),
-            ],
-        }));
+        this.onSettingChanged(HiddenApps.KEY, () => this._fillHiddenApps());
 
         const keyboard = new Adw.PreferencesGroup({
             title: _('Keyboard'),
+            description: _('Ctrl+Alt+Tab moves focus to the panel. Arrow keys move between icons, and the Menu key opens the focused icon’s menu'),
         });
         this.add(keyboard);
 
-        keyboard.add(this._switchRow('hotkeys', {
-            title: _('Super+number activates icons'),
-            subtitle: _('Super+1 to Super+9 open the icon in that position, instead of the Nth favorite in the dash'),
+        keyboard.add(this.switchRow('hotkeys', {
+            title: _('Activate Icons With Super+Number'),
+            subtitle: _('Super+1 to Super+9 open the icon in that position, instead of the nth favourite in the dash'),
         }));
 
         const previews = new Adw.PreferencesGroup({
-            title: _('Hover previews'),
-            description: _('Click a thumbnail to focus its window, middle-click to close it.'),
+            title: _('Hover Previews'),
+            description: _('Click a thumbnail to focus its window. Its close button or a middle-click closes it'),
         });
         this.add(previews);
 
-        previews.add(this._switchRow('show-previews', {
-            title: _('Show window previews'),
+        previews.add(this.switchRow('show-previews', {
+            title: _('Window Previews'),
             subtitle: _('Live thumbnails on hover instead of the text tooltip'),
         }));
 
-        const size = this._spinRow('preview-size', {
-            title: _('Preview width'),
+        const size = this.spinRow('preview-size', {
+            title: _('Preview Width'),
             subtitle: _('Largest width of one thumbnail in pixels'),
             lower: 120,
             upper: 320,
@@ -103,16 +87,6 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         previews.add(size);
     }
 
-    _onSettingChanged(key, callback) {
-        this._settingsIds.push(
-            this._settings.connect(`changed::${key}`, callback));
-    }
-
-    disconnectSettings() {
-        this._settingsIds.forEach(id => this._settings.disconnect(id));
-        this._settingsIds = [];
-    }
-
     _fillHiddenApps() {
         for (const row of this._hiddenRows)
             this._hiddenGroup.remove(row);
@@ -121,7 +95,7 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         this._hiddenRows = ids.length > 0
             ? ids.map(id => this._hiddenAppRow(id))
             : [new Adw.ActionRow({
-                title: _('No hidden apps'),
+                title: _('No Hidden Apps'),
                 subtitle: _('Right-click an icon on the panel and choose Hide from App Bar'),
                 sensitive: false,
             })];
@@ -132,7 +106,7 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
 
     _hiddenAppRow(id) {
         // Null for an uninstalled app; the row stays so the id can be removed.
-        const info = Gio.DesktopAppInfo.new(id);
+        const info = GioUnix.DesktopAppInfo.new(id);
         const row = new Adw.ActionRow({
             title: info?.get_display_name() ?? id,
             subtitle: info ? id : _('Not installed'),
@@ -150,48 +124,6 @@ class AppBarBehaviorPage extends Adw.PreferencesPage {
         unhide.connect('clicked', () => HiddenApps.remove(this._settings, id));
         row.add_suffix(unhide);
         row.activatable_widget = unhide;
-        return row;
-    }
-
-    _switchRow(key, {title, subtitle}) {
-        const row = new Adw.SwitchRow({title, subtitle});
-        this._settings.bind(key, row, 'active', Gio.SettingsBindFlags.DEFAULT);
-        return row;
-    }
-
-    _spinRow(key, {title, subtitle, lower, upper, step}) {
-        const row = new Adw.SpinRow({
-            title,
-            subtitle,
-            adjustment: new Gtk.Adjustment({
-                lower,
-                upper,
-                step_increment: step,
-                page_increment: step * 2,
-            }),
-        });
-        this._settings.bind(key, row, 'value', Gio.SettingsBindFlags.DEFAULT);
-        return row;
-    }
-
-    // ComboRow can't bind to an enum key.
-    _comboRow(key, nicks, {title, subtitle, labels}) {
-        const row = new Adw.ComboRow({
-            title,
-            subtitle,
-            model: Gtk.StringList.new(labels),
-            selected: Math.max(0, nicks.indexOf(this._settings.get_string(key))),
-        });
-
-        row.connect('notify::selected', () =>
-            this._settings.set_string(key, nicks[row.get_selected()]));
-
-        this._onSettingChanged(key, () => {
-            const index = nicks.indexOf(this._settings.get_string(key));
-            if (index >= 0 && index !== row.get_selected())
-                row.set_selected(index);
-        });
-
         return row;
     }
 });
